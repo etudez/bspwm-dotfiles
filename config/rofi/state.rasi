@@ -1,0 +1,28 @@
+/* Rofi's built-in theme paints element states with its Solarized-like
+ * variables. These selectors have the same specificity but come later, so the
+ * Material surfaces win. Imported by theme.rasi and dialog.rasi. */
+
+element normal.normal {
+    background-color: transparent;
+    text-color:       @on-surface;
+}
+
+element selected.normal {
+    background-color: @primary-container;
+    text-color:       @on-primary-container;
+}
+
+element alternate.normal {
+    background-color: transparent;
+    text-color:       @on-surface;
+}
+
+element normal.urgent {
+    background-color: transparent;
+    text-color:       @error;
+}
+
+element selected.urgent {
+    background-color: @error;
+    text-color:       @on-error;
+}

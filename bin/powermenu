@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Session menu. Destructive actions ask for confirmation and never hang on a
+# missing polkit agent: after 6 seconds we show an error notification.
+
+set -u
+
+ROFI=(rofi -dmenu -i -theme "$HOME/.config/rofi/dialog.rasi" -p "")
+
+choice=$(printf '%s\n' \
+    "󰌾  Блокировка" \
+    "󰒲  Сон" \
+    "󰜉  Перезагрузка" \
+    "󰐥  Выключить" \
+    "󰍃  Выйти" | "${ROFI[@]}" -mesg "  󰐥  Питание")
+[ -n "$choice" ] || exit 0
+
+confirm() {
+    local answer
+    answer=$(printf '%s\n' "Отмена" "$1" | "${ROFI[@]}" -mesg "  Подтверждение")
+    [ "$answer" = "$1" ]
+}
+
+power() { # power <suspend|reboot|poweroff>
+    local action=$1
+    if command -v loginctl >/dev/null 2>&1; then
+        if timeout 6 loginctl --no-ask-password "$action" 2>/dev/null; then
+            return 0
+        fi
+    fi
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl "$action" 2>/dev/null && return 0
+    fi
+    "$HOME/.local/bin/notify" power "Питание" \
+        "Не удалось: $action. Нужен polkit-агент/правило или sudo $action"
+}
+
+case $choice in
+    *Блокировка) exec "$HOME/.local/bin/lock" ;;
+    *Сон)        power suspend ;;
+    *Перезагрузка)
+        confirm "Перезагрузить" || exit 0
+        power reboot
+        ;;
+    *Выключить)
+        confirm "Выключить" || exit 0
+        power poweroff
+        ;;
+    *Выйти)
+        confirm "Выйти" || exit 0
+        bspc quit
+        ;;
+esac

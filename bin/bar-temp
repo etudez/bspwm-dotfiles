@@ -1,0 +1,52 @@
+#!/bin/sh
+# bar-temp cpu|gpu — current temperature from hwmon for the top bar.
+
+kind=${1:-cpu}
+
+case "$kind" in
+    cpu) names='coretemp k10temp zenpower cpu_thermal' ;;
+    gpu) names='amdgpu radeon nouveau i915 xe' ;;
+    *)
+        printf '?'
+        exit 0
+        ;;
+esac
+
+hwmon=
+for d in /sys/class/hwmon/hwmon*; do
+    [ -f "$d/name" ] || continue
+    name=$(cat "$d/name" 2>/dev/null) || continue
+    for n in $names; do
+        if [ "$name" = "$n" ]; then
+            hwmon=$d
+            break 2
+        fi
+    done
+done
+
+if [ -z "$hwmon" ]; then
+    printf '--'
+    exit 0
+fi
+
+value=
+if [ -f "$hwmon/temp1_input" ]; then
+    value=$(cat "$hwmon/temp1_input" 2>/dev/null)
+fi
+
+# Fall back to the hottest sensor if there is no package/edge reading.
+if [ -z "$value" ]; then
+    for f in "$hwmon"/temp*_input; do
+        [ -f "$f" ] || continue
+        v=$(cat "$f" 2>/dev/null) || continue
+        if [ -z "$value" ] || [ "$v" -gt "$value" ] 2>/dev/null; then
+            value=$v
+        fi
+    done
+fi
+
+if [ -z "$value" ]; then
+    printf '--'
+else
+    printf '%s°' "$((value / 1000))"
+fi

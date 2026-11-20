@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# thunar-setup — apply a modern, Material-friendly Thunar configuration.
+#
+# Thunar stores its settings in Xfconf (channel "thunar"); this script is the
+# single source of truth so the look survives fresh installs.
+
+set -u
+
+if ! command -v xfconf-query >/dev/null 2>&1; then
+    echo "thunar-setup: xfconf-query not found" >&2
+    exit 1
+fi
+
+setp() { # key value type
+    local key=$1 value=$2 type=$3
+    if xfconf-query -c thunar -p "$key" >/dev/null 2>&1; then
+        xfconf-query -c thunar -p "$key" -s "$value" >/dev/null
+    else
+        xfconf-query -c thunar -p "$key" -n -t "$type" -s "$value" >/dev/null
+    fi
+}
+
+# View
+setp /last-view                        ThunarIconView                    string
+setp /last-icon-view-zoom-level        THUNAR_ZOOM_LEVEL_150_PERCENT     string
+setp /last-location-bar                ThunarLocationButtons             string
+setp /last-side-pane                   THUNAR_SIDEPANE_TYPE_SHORTCUTS    string
+setp /last-statusbar-visible           true                              bool
+setp /last-show-hidden                 false                             bool
+setp /last-menubar-visible             false                             bool
+
+# Behaviour
+setp /misc-folders-first               true                              bool
+setp /misc-single-click                false                             bool
+setp /misc-thumbnail-mode              THUNAR_THUMBNAIL_MODE_ONLY_LOCAL  string
+setp /misc-thumbnail-draw-frames       false                             bool
+setp /misc-symbolic-icons-in-toolbar   true                              bool
+setp /misc-symbolic-icons-in-sidepane  true                              bool
+setp /misc-small-toolbar-icons         false                             bool
+setp /misc-support-overlay-scrolling   true                              bool
+setp /misc-highlighting-enabled        true                              bool
+setp /misc-open-new-window-as-tab      true                              bool
+setp /misc-confirm-move-to-trash       true                              bool
+setp /misc-confirm-close-multiple-tabs true                              bool
+setp /misc-date-style                  THUNAR_DATE_STYLE_SIMPLE          string
+setp /misc-file-size-binary            true                              bool
+setp /misc-remember-geometry           true                              bool
+
+# Client-side header bar (modern look; bspwm still draws the 1px border).
+setp /misc-use-csd                     true                              bool

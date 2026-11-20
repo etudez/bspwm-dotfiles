@@ -1,0 +1,2 @@
+# Keep Wi-Fi power saving off when a wireless interface appears.
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="wl*", RUN+="/usr/local/bin/performance wifi %k"

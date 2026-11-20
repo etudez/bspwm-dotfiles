@@ -1,0 +1,55 @@
+# Debian / Ubuntu
+# Installed with `apt-get install -y`.
+# NOTE: bookworm ships picom 10 without animations. `doctor.sh` will tell you;
+# build picom from source (or use testing/sid) for the motion to work.
+bspwm
+sxhkd
+picom
+rofi
+dunst
+kitty
+feh
+maim
+slop
+xclip
+xdotool
+brightnessctl
+alsa-utils
+playerctl
+i3lock
+xss-lock
+x11-xkb-utils
+x11-xserver-utils
+fonts-roboto
+fonts-noto-color-emoji
+curl
+xdg-utils
+thunar
+thunar-volman
+thunar-archive-plugin
+tumbler
+ffmpegthumbnailer
+gvfs
+gvfs-backends
+file-roller
+udisks2
+lxpolkit
+gnome-themes-extra
+xfconf
+xz-utils
+papirus-icon-theme
+python3
+firefox-esr
+ethtool
+iw
+openresolv
+nftables
+iptables
+fish
+pipewire
+pipewire-alsa
+pipewire-pulse
+wireplumber
+pavucontrol
+ffmpeg
+polybar

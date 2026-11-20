@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+# Desktop switching with a tiny Material OSD (no status bar needed).
+
+osd() {
+    [ "${DOTFILES_OSD:-1}" = "0" ] && return 0
+    command -v dunstify >/dev/null 2>&1 || return 0
+    dunstify -a dotfiles-osd -h string:x-dunst-stack-tag:desk \
+        -u low -t 650 "$1" "" >/dev/null 2>&1
+    return 0
+}
+
+case "${1:-}" in
+    next)
+        bspc desktop -f next.local
+        osd "$(bspc query -D -d focused --names)"
+        ;;
+    prev)
+        bspc desktop -f prev.local
+        osd "$(bspc query -D -d focused --names)"
+        ;;
+    move)
+        bspc node -d "$2"
+        osd "$2"
+        ;;
+    *)
+        bspc desktop -f "$1"
+        osd "$1"
+        ;;
+esac

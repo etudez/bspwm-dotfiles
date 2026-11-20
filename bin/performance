@@ -1,0 +1,196 @@
+#!/bin/sh
+# performance — CPU/GPU/network performance mode for Linux desktops.
+#
+#   performance status     show the current state (no root)
+#   performance apply      max performance (root)
+#   performance balanced   back to schedutil + GPU auto (root)
+#   performance wifi IF    disable Wi-Fi power save for one interface (root)
+#
+# The apply mode is safe to repeat; it only writes runtime knobs.
+
+MODE=${1:-status}
+
+need_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "performance: run as root: sudo $0 $*" >&2
+        exit 1
+    fi
+}
+
+cpu_governors() {
+    for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_governor; do
+        [ -w "$f" ] && echo "$f"
+    done
+}
+
+apply_cpu() {
+    for f in $(cpu_governors); do
+        echo performance > "$f" 2>/dev/null || true
+    done
+    BOOST=/sys/devices/system/cpu/cpufreq/boost
+    [ -w "$BOOST" ] && echo 1 > "$BOOST" 2>/dev/null || true
+    echo "cpu: performance"
+}
+
+balanced_cpu() {
+    local available
+    available=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors 2>/dev/null || true)
+    case " $available " in
+        *" schedutil "*) target=schedutil ;;
+        *" ondemand "*)  target=ondemand ;;
+        *)               target=performance ;;
+    esac
+    for f in $(cpu_governors); do
+        echo "$target" > "$f" 2>/dev/null || true
+    done
+    echo "cpu: $target"
+}
+
+apply_gpu() {
+    for f in /sys/class/drm/card*/device/power_dpm_force_performance_level; do
+        [ -w "$f" ] || continue
+        echo high > "$f" 2>/dev/null && echo "gpu: high"
+    done
+}
+
+balanced_gpu() {
+    for f in /sys/class/drm/card*/device/power_dpm_force_performance_level; do
+        [ -w "$f" ] || continue
+        echo auto > "$f" 2>/dev/null && echo "gpu: auto"
+    done
+}
+
+usb_pm_off() {
+    local dev
+    dev=$(readlink -f "/sys/class/net/$1/device" 2>/dev/null) || return 0
+    local n=0
+    while [ -n "$dev" ] && [ "$dev" != "/" ] && [ "$n" -lt 5 ]; do
+        if [ -w "$dev/power/control" ]; then
+            echo on > "$dev/power/control" 2>/dev/null &&
+                echo "usb: runtime PM off ($dev)"
+            return 0
+        fi
+        dev=$(dirname "$dev")
+        n=$((n + 1))
+    done
+}
+
+wifi_apply() {
+    local iface=$1
+    [ -n "$iface" ] || return 0
+    if command -v iw >/dev/null 2>&1; then
+        iw dev "$iface" set power_save off 2>/dev/null &&
+            echo "wifi: $iface power_save off"
+    fi
+    usb_pm_off "$iface"
+}
+
+wifi_interfaces() {
+    for d in /sys/class/net/*; do
+        [ -d "$d/wireless" ] && basename "$d"
+    done
+}
+
+apply_wifi() {
+    for iface in $(wifi_interfaces); do
+        wifi_apply "$iface"
+    done
+}
+
+apply_wired() {
+    for d in /sys/class/net/*; do
+        iface=$(basename "$d")
+        [ "$iface" = lo ] && continue
+        [ -d "$d/wireless" ] && continue
+        [ -e "$d/device" ] || continue
+        command -v ethtool >/dev/null 2>&1 || continue
+        ethtool -s "$iface" wol d 2>/dev/null &&
+            echo "wired: $iface wake-on-lan off"
+        ethtool --set-eee "$iface" eee off 2>/dev/null &&
+            echo "wired: $iface EEE off"
+    done
+}
+
+apply_net() {
+    modprobe tcp_bbr 2>/dev/null || true
+    modprobe sch_fq 2>/dev/null || true
+
+    sysctl -qw net.core.default_qdisc=fq 2>/dev/null || true
+    sysctl -qw net.core.rmem_max=16777216 2>/dev/null || true
+    sysctl -qw net.core.wmem_max=16777216 2>/dev/null || true
+    sysctl -qw "net.ipv4.tcp_rmem=4096 87380 16777216" 2>/dev/null || true
+    sysctl -qw "net.ipv4.tcp_wmem=4096 65536 16777216" 2>/dev/null || true
+    sysctl -qw net.core.netdev_max_backlog=16384 2>/dev/null || true
+    sysctl -qw net.ipv4.tcp_slow_start_after_idle=0 2>/dev/null || true
+    sysctl -qw net.ipv4.tcp_mtu_probing=1 2>/dev/null || true
+    sysctl -qw vm.swappiness=10 2>/dev/null || true
+
+    if grep -qw bbr /proc/sys/net/ipv4/tcp_available_congestion_control 2>/dev/null; then
+        sysctl -qw net.ipv4.tcp_congestion_control=bbr 2>/dev/null &&
+            echo "net: tcp_bbr"
+    fi
+}
+
+status_cpu() {
+    local f
+    f=/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    [ -f "$f" ] && echo "cpu governor: $(cat "$f")"
+    f=/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq
+    [ -f "$f" ] && echo "cpu freq:     $(( $(cat "$f") / 1000 )) MHz"
+}
+
+status_gpu() {
+    for f in /sys/class/drm/card*/device/power_dpm_force_performance_level; do
+        [ -f "$f" ] && echo "gpu level:    $(cat "$f")"
+    done
+}
+
+status_wifi() {
+    for iface in $(wifi_interfaces); do
+        if command -v iw >/dev/null 2>&1; then
+            echo "wifi $iface:    $(iw dev "$iface" get power_save 2>/dev/null || echo '?')"
+        else
+            echo "wifi $iface:    iw not installed"
+        fi
+    done
+}
+
+status_net() {
+    sysctl -n net.ipv4.tcp_congestion_control net.core.default_qdisc 2>/dev/null |
+        awk 'NR==1{print "tcp cc:       "$0} NR==2{print "qdisc:        "$0}'
+}
+
+case "$MODE" in
+    apply)
+        need_root "$@"
+        apply_cpu
+        apply_gpu
+        apply_net
+        apply_wifi
+        apply_wired
+        echo "performance: applied"
+        ;;
+    balanced)
+        need_root "$@"
+        balanced_cpu
+        balanced_gpu
+        echo "performance: balanced"
+        ;;
+    wifi)
+        need_root "$@"
+        wifi_apply "${2:-}"
+        ;;
+    status)
+        status_cpu
+        status_gpu
+        status_wifi
+        status_net
+        ;;
+    -h|--help)
+        sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+        ;;
+    *)
+        echo "usage: performance status|apply|balanced|wifi IFACE" >&2
+        exit 2
+        ;;
+esac

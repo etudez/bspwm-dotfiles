@@ -1,0 +1,202 @@
+#
+# sxhkd — Material You, minimal
+# Описание над каждым биндингом попадает в справку (`Super+F1`).
+#
+
+# --- Launch -----------------------------------------------------------------
+
+# Терминал (kitty) в домашней папке
+super + Return
+    kitty --directory "$HOME"
+
+# Файлы (Thunar) в домашней папке
+super + e
+    thunar "$HOME"
+
+# Браузер (Firefox)
+super + shift + b
+    ~/.local/bin/browser
+
+# Запуск приложений (rofi)
+super + space
+    rofi -show drun
+
+# Дашборд: время, звук, сеть, диск
+super + d
+    rofi -show dash -modi "dash:~/.local/bin/dashboard" -theme ~/.config/rofi/dialog.rasi
+
+# Панель звука: громкость, mute, микшер
+super + shift + v
+    ~/.local/bin/sound
+
+# Переключение между окнами
+super + Tab
+    rofi -show window -theme ~/.config/rofi/dialog.rasi
+
+# Сменить обои и палитру Material You
+super + shift + t
+    ~/.local/bin/theme-pick
+
+# Меню питания: lock, suspend, reboot, power off
+super + shift + q
+    ~/.local/bin/powermenu
+
+# Заблокировать экран
+super + Escape
+    ~/.local/bin/lock
+
+# Справка по всем хоткеям
+super + F1
+    ~/.local/bin/help
+
+# Микрофон: вход, уровень, mute, буст
+super + shift + m
+    ~/.local/bin/mic
+
+# Скрыть/показать верхний бар
+super + shift + a
+    ~/.local/bin/bar toggle
+
+# --- bspwm: session ---------------------------------------------------------
+
+# Выйти / перезапустить bspwm
+super + alt + {q,r}
+    bspc {quit,wm -r}
+
+# Перечитать все конфиги (bspwm, sxhkd, picom, dunst)
+super + shift + r
+    ~/.local/bin/reload
+
+# Включить / выключить композитор (для игр)
+super + shift + p
+    ~/.local/bin/picom-toggle
+
+# Закрыть окно / убить процесс
+super + {_,shift + }w
+    bspc node -{c,k}
+
+# Полный экран (включить / выключить)
+super + f
+    bspc node -t '~fullscreen'
+
+# Аварийно вернуть окно в тайлинг, если fullscreen застрял
+super + shift + f
+    bspc node -t tiled
+
+# Монорежим (одно окно на столе)
+super + m
+    bspc desktop -l next
+
+# Псевдо-тайлинг (окно сохраняет пропорции)
+super + t
+    bspc node -t pseudo_tiled
+
+# Плавающее окно
+super + s
+    bspc node -t floating
+
+# Убрать / вернуть отступы между окнами
+super + g
+    ~/.local/bin/gaps
+
+# --- bspwm: focus & swap ----------------------------------------------------
+
+# Фокус по направлению (Shift — поменять окна местами)
+super + {_,shift + }{h,j,k,l}
+    bspc node -{f,s} {west,south,north,east}
+
+# Фокус: родитель / сосед / первое / второе окно
+super + {p,b,comma,period}
+    bspc node -f @{parent,brother,first,second}
+
+# Следующее / предыдущее окно на столе
+super + {_,shift + }c
+    bspc node -f {next,prev}.local.!hidden.window
+
+# История фокуса: назад / вперёд
+super + {o,i}
+    bspc wm -h off; bspc node {older,newer} -f; bspc wm -h on
+
+# --- bspwm: desktops --------------------------------------------------------
+
+# Перейти на рабочий стол 1…9
+super + {1-9}
+    ~/.local/bin/desk {1-9}
+
+# Перенести окно на рабочий стол 1…9
+super + shift + {1-9}
+    ~/.local/bin/desk move {1-9}
+
+# Предыдущий / следующий рабочий стол
+super + bracket{left,right}
+    ~/.local/bin/desk {prev,next}
+
+# Вернуться на предыдущий рабочий стол
+super + grave
+    bspc desktop -f last
+
+# --- bspwm: preselect -------------------------------------------------------
+
+# Предвыбрать сторону для нового окна
+super + ctrl + {h,j,k,l}
+    bspc node -p {west,south,north,east}
+
+# Предвыбрать пропорцию нового окна
+super + ctrl + {1-9}
+    bspc node -o 0.{1-9}
+
+# Отменить предвыбор окна
+super + ctrl + space
+    bspc node -p cancel
+
+# Отменить предвыбор на всём столе
+super + ctrl + shift + space
+    bspc query -N -d | xargs -I id -n 1 bspc node id -p cancel
+
+# --- bspwm: move & resize ---------------------------------------------------
+
+# Расширить окно в сторону
+super + alt + {h,j,k,l}
+    bspc node -z {left -20 0,bottom 0 20,top 0 -20,right 20 0}
+
+# Сузить окно со стороны
+super + alt + shift + {h,j,k,l}
+    bspc node -z {right -20 0,top 0 20,bottom 0 -20,left 20 0}
+
+# Двигать плавающее окно
+super + {Left,Down,Up,Right}
+    bspc node -v {-20 0,0 20,0 -20,20 0}
+
+# --- Media & hardware keys --------------------------------------------------
+
+# Громкость: громче / тише
+XF86Audio{RaiseVolume,LowerVolume}
+    ~/.local/bin/volume {up,down}
+
+# Выключить / включить звук
+XF86AudioMute
+    ~/.local/bin/volume mute
+
+# Яркость: выше / ниже
+XF86MonBrightness{Up,Down}
+    ~/.local/bin/brightness {up,down}
+
+# Плеер: пауза, следующий, предыдущий
+XF86Audio{Play,Next,Prev}
+    command -v playerctl >/dev/null && playerctl {play-pause,next,previous}
+
+# --- Screenshots ------------------------------------------------------------
+
+# Скриншот всего экрана в буфер
+Print
+    ~/.local/bin/screenshot full
+
+# Скриншот выделенной области в буфер
+shift + Print
+    ~/.local/bin/screenshot region
+
+# --- sxhkd ------------------------------------------------------------------
+
+# Перечитать только sxhkdrc
+super + shift + Escape
+    pkill -USR1 -x sxhkd

@@ -1,0 +1,63 @@
+@import "colors.rasi"
+@import "state.rasi"
+
+* {
+    background-color: transparent;
+    text-color:       @on-surface;
+    font:             "JetBrains Mono 10";
+    border:           0;
+    margin:           0;
+    padding:          0;
+    spacing:          0;
+}
+
+window {
+    width:            440px;
+    padding:          8px;
+    border:           1px;
+    border-color:     @outline-variant;
+    border-radius:    0;
+    background-color: @surface-container;
+}
+
+mainbox {
+    padding: 2px;
+    spacing: 6px;
+}
+
+inputbar {
+    padding:          8px 12px;
+    border-radius:    0;
+    background-color: @surface-container-high;
+    children:         [ entry ];
+}
+
+entry {
+    placeholder:       "Поиск";
+    placeholder-color: @on-surface-variant;
+    cursor:            text;
+    text-color:        @on-surface;
+}
+
+listview {
+    lines:        9;
+    spacing:      2px;
+    scrollbar:    false;
+    fixed-height: true;
+    dynamic:      false;
+}
+
+element {
+    padding:          9px 12px;
+    border-radius:    0;
+    background-color: transparent;
+}
+
+element selected {
+    background-color: @primary-container;
+    text-color:       @on-primary-container;
+}
+
+element-text {
+    vertical-align: 0.5;
+}

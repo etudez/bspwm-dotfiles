@@ -1,0 +1,8 @@
+#!/bin/sh
+# runit service for the AmneziaVPN privileged daemon.
+exec 2>&1
+
+mkdir -p /var/run/amneziavpn
+chmod 755 /var/run/amneziavpn
+
+exec /opt/AmneziaVPN/bin/AmneziaVPN-service

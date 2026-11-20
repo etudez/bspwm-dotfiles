@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Toggle tiling gaps. picom animates the geometry change.
+
+gap=$(bspc config window_gap)
+if [ "$gap" = "0" ]; then
+    bspc config window_gap 8
+else
+    bspc config window_gap 0
+fi

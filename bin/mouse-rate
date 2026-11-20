@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Measure the report (polling) rate of a mouse from evdev.
+
+Usage:
+    sudo mouse-rate [seconds] [event-device]
+
+Without a device it picks the first *-event-mouse under /dev/input/by-id,
+preferring one whose name does not look like a keyboard. Move the mouse
+continuously while it runs. The number printed is SYN_REPORT packets per
+second, which is the rate the kernel receives from the device.
+"""
+
+import glob
+import os
+import select
+import struct
+import sys
+import time
+
+EV_SYN = 0
+SYN_REPORT = 0
+
+
+def pick_device():
+    paths = sorted(
+        glob.glob("/dev/input/by-id/*-event-mouse"),
+        key=lambda p: ("keyboard" in p.lower(), p),
+    )
+    return paths[0] if paths else None
+
+
+def main():
+    seconds = 5.0
+    device = None
+
+    args = sys.argv[1:]
+    if args:
+        try:
+            seconds = float(args[0])
+        except ValueError:
+            device = args[0]
+        else:
+            if len(args) > 1:
+                device = args[1]
+
+    if device is None:
+        device = pick_device()
+    if device is None:
+        print("mouse-rate: no mouse event device found", file=sys.stderr)
+        return 1
+
+    try:
+        fd = os.open(device, os.O_RDONLY | os.O_NONBLOCK)
+    except PermissionError:
+        print(
+            f"mouse-rate: cannot read {device}\n"
+            f"run it as root:  sudo mouse-rate {seconds:g}",
+            file=sys.stderr,
+        )
+        return 1
+    except OSError as exc:
+        print(f"mouse-rate: {device}: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"device: {device}")
+    print(f"measuring for {seconds:g}s — move the mouse in circles…")
+
+    count = 0
+    start = time.monotonic()
+    try:
+        while True:
+            left = seconds - (time.monotonic() - start)
+            if left <= 0:
+                break
+            ready, _, _ = select.select([fd], [], [], min(left, 0.2))
+            if not ready:
+                continue
+            data = os.read(fd, 24 * 512)
+            for off in range(0, len(data) - 23, 24):
+                _sec, _usec, typ, code, _value = struct.unpack_from(
+                    "llHHi", data, off
+                )
+                if typ == EV_SYN and code == SYN_REPORT:
+                    count += 1
+    finally:
+        os.close(fd)
+
+    elapsed = time.monotonic() - start
+    rate = count / elapsed if elapsed else 0
+    print(f"reports: {count} in {elapsed:.2f}s  →  ~{rate:.0f} Hz")
+    if rate < 200:
+        print("hint: move the mouse faster/continuously while measuring")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

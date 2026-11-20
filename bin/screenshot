@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# screenshot [full|region] — save + copy to clipboard + notify
+
+dir="$HOME/Pictures/Screenshots"
+mkdir -p "$dir" || exit 1
+file="$dir/$(date +%Y-%m-%d_%H-%M-%S).png"
+
+case "${1:-full}" in
+    region) maim -s -u "$file" || exit 0 ;;
+    *)      maim -u "$file" || exit 0 ;;
+esac
+
+[ -s "$file" ] || exit 0
+
+if command -v xclip >/dev/null 2>&1; then
+    xclip -selection clipboard -t image/png -i "$file" >/dev/null 2>&1
+fi
+
+"$HOME/.local/bin/notify" screenshot "Screenshot" "$(basename "$file")"

@@ -1,0 +1,93 @@
+# Alpine Linux (edge/community)
+# Installed with `apk add --no-cache`.
+# Some packages may need edge/testing on older Alpine branches.
+
+# Session / OpenRC
+elogind
+elogind-openrc
+dbus
+dbus-openrc
+dbus-x11
+eudev
+eudev-openrc
+polkit
+polkit-gnome
+
+# X11 / GPU
+xorg-server
+xinit
+xf86-input-libinput
+xf86-video-amdgpu
+mesa-dri-gallium
+mesa-vulkan-ati
+vulkan-loader
+
+# Window manager / desktop
+bspwm
+sxhkd
+picom
+polybar
+rofi
+dunst
+kitty
+feh
+maim
+slop
+xclip
+xdotool
+brightnessctl
+alsa-utils
+playerctl
+i3lock-color
+xset
+xrandr
+xrdb
+setxkbmap
+
+# Audio
+pipewire
+pipewire-pulse
+wireplumber
+pavucontrol
+
+# Shell
+fish
+bash
+
+# Files
+thunar
+thunar-volman
+thunar-archive-plugin
+tumbler
+gvfs
+gvfs-fuse
+udisks2
+file-roller
+
+# GTK / icons / fonts
+gtk+3.0
+gtk4.0
+libadwaita
+adwaita-icon-theme
+papirus-icon-theme
+font-roboto
+font-dejavu
+font-noto
+font-awesome
+fontconfig
+
+# Tooling
+ffmpeg
+curl
+xz
+tar
+python3
+xdg-utils
+xdg-user-dirs
+
+# Network
+iw
+ethtool
+nftables
+iptables
+openresolv

@@ -1,0 +1,21 @@
+// Allow members of the wheel group to power off, reboot and suspend from the
+// desktop without an interactive polkit prompt (single-user workstation).
+polkit.addRule(function(action, subject) {
+    var allowed = [
+        "org.freedesktop.login1.power-off",
+        "org.freedesktop.login1.power-off-multiple-sessions",
+        "org.freedesktop.login1.power-off-ignore-inhibit",
+        "org.freedesktop.login1.reboot",
+        "org.freedesktop.login1.reboot-multiple-sessions",
+        "org.freedesktop.login1.reboot-ignore-inhibit",
+        "org.freedesktop.login1.suspend",
+        "org.freedesktop.login1.suspend-multiple-sessions",
+        "org.freedesktop.login1.suspend-ignore-inhibit",
+        "org.freedesktop.login1.hibernate",
+        "org.freedesktop.login1.hibernate-multiple-sessions",
+        "org.freedesktop.login1.hibernate-ignore-inhibit"
+    ];
+    if (subject.isInGroup("wheel") && allowed.indexOf(action.id) !== -1) {
+        return polkit.Result.YES;
+    }
+});

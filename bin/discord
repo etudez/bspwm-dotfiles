@@ -1,0 +1,13 @@
+#!/bin/sh
+# Launch Discord: a native install first, then the Flatpak build.
+
+if [ -x "$HOME/.local/opt/discord/Discord" ]; then
+    exec "$HOME/.local/opt/discord/Discord" "$@"
+fi
+
+if command -v flatpak >/dev/null 2>&1; then
+    exec flatpak run com.discordapp.Discord "$@"
+fi
+
+printf '%s\n' "Discord is not installed. See README.md → Discord." >&2
+exit 1

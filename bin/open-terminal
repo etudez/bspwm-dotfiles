@@ -1,0 +1,7 @@
+#!/bin/sh
+# Open kitty in a directory (used by the Thunar "Open Terminal Here" action).
+dir=${1:-$HOME}
+if [ ! -d "$dir" ]; then
+    dir=$(dirname -- "$dir")
+fi
+exec kitty --directory "$dir"

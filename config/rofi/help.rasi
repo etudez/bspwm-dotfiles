@@ -1,0 +1,62 @@
+@import "colors.rasi"
+@import "state.rasi"
+
+* {
+    background-color: transparent;
+    text-color:       @on-surface;
+    font:             "JetBrains Mono 10";
+    border:           0;
+    margin:           0;
+    padding:          0;
+    spacing:          0;
+}
+
+window {
+    width:            760px;
+    padding:          10px;
+    border:           1px;
+    border-color:     @outline-variant;
+    background-color: @surface-container;
+}
+
+mainbox {
+    padding: 2px;
+    spacing: 6px;
+}
+
+inputbar {
+    padding:          10px 14px;
+    border-radius:    0;
+    background-color: @surface-container-high;
+    children:         [ entry ];
+}
+
+entry {
+    placeholder:       "Поиск по хоткеям";
+    placeholder-color: @on-surface-variant;
+    cursor:            text;
+    text-color:        @on-surface;
+}
+
+listview {
+    lines:        18;
+    spacing:      1px;
+    scrollbar:    false;
+    fixed-height: true;
+    dynamic:      false;
+}
+
+element {
+    padding:          5px 10px;
+    border-radius:    0;
+    background-color: transparent;
+}
+
+element selected {
+    background-color: @primary-container;
+    text-color:       @on-primary-container;
+}
+
+element-text {
+    vertical-align: 0.5;
+}

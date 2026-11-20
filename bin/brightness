@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# brightness up|down|get — backlight only (ignores keyboard LEDs).
+
+set -u
+
+self=$(readlink -f "$0")
+NOTIFY="$(cd "$(dirname "$self")" && pwd)/notify"
+action=${1:-get}
+
+if ! command -v brightnessctl >/dev/null 2>&1; then
+    [ "$action" = get ] && echo "--"
+    exit 0
+fi
+
+percent() {
+    brightnessctl -c backlight -m 2>/dev/null |
+        awk -F, '{gsub(/%/, "", $4); print $4}'
+}
+
+case $action in
+    get) percent; exit 0 ;;
+esac
+
+[ -n "$(percent)" ] || exit 0
+
+case $action in
+    up)   brightnessctl -c backlight -q set 5%+ >/dev/null ;;
+    down) brightnessctl -c backlight -q set 5%- >/dev/null ;;
+    *)    echo "usage: brightness up|down|get" >&2; exit 2 ;;
+esac
+
+p=$(percent)
+[ -n "$p" ] && NOTIFY_VALUE=$p "$NOTIFY" brightness "Brightness" "${p}%"
+exit 0

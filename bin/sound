@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# sound — a small volume panel built on rofi.
+#
+# Works with ALSA, PulseAudio or PipeWire (bin/volume picks the backend).
+# Selecting a percentage applies it and reopens the panel; Esc closes it.
+
+set -u
+
+self=$(readlink -f "$0")
+DOTFILES=${DOTFILES:-$(cd "$(dirname "$self")/.." && pwd)}
+THEME="$HOME/.config/rofi/sound.rasi"
+VOL="$DOTFILES/bin/volume"
+
+if ! command -v rofi >/dev/null 2>&1; then
+    exec "$VOL" get
+fi
+
+labels=()
+actions=()
+
+row() { # icon label value action
+    local icon=$1 label=$2 value=$3 action=$4 pad
+    pad=$((16 - ${#label}))
+    [ "$pad" -lt 0 ] && pad=0
+    labels+=("$icon  $label$(printf '%*s' "$pad" '')  $value")
+    actions+=("$action")
+}
+
+while :; do
+    labels=()
+    actions=()
+
+    vol=$("$VOL" get 2>/dev/null || true)
+    [ -n "$vol" ] || vol=0
+    muted=$("$VOL" muted 2>/dev/null || echo no)
+    if [ "$muted" = yes ]; then state="off"; else state="${vol}%"; fi
+
+    row "󰕾" "Громкость" "$state" noop
+    if [ "$muted" = yes ]; then mtxt="вкл"; else mtxt="выкл"; fi
+    row "󰝟" "Без звука" "$mtxt" mute
+
+    step=$(( (vol + 5) / 10 * 10 ))
+    [ "$step" -gt 100 ] && step=100
+    for p in 0 10 20 30 40 50 60 70 80 90 100; do
+        if [ "$p" = "$step" ]; then
+            mark="●"; icon="󰕾"
+        else
+            mark=" "; icon="󰕿"
+        fi
+        row "$mark $icon" "${p}%" "" "set:${p}"
+    done
+
+    row "󰘊" "Микшер" "alsamixer" mixer
+    if command -v pavucontrol >/dev/null 2>&1; then
+        row "󰒓" "Настройки звука" "pavucontrol" settings
+    fi
+
+    sel=$(for i in "${!labels[@]}"; do printf '%s\n' "${labels[$i]}"; done |
+        rofi -dmenu -i -no-custom -format i -theme "$THEME" \
+            -p "" -mesg "  󰕾  Звук" 2>/dev/null) || exit 0
+
+    [ -n "$sel" ] || exit 0
+    idx=$sel
+    if ! [[ $idx =~ ^[0-9]+$ ]]; then exit 0; fi
+    action=${actions[$idx]:-noop}
+
+    case $action in
+        noop) ;;
+        mute) "$VOL" mute ;;
+        set:*) "$VOL" set "${action#set:}" ;;
+        mixer) exec kitty --title alsamixer alsamixer ;;
+        settings) exec pavucontrol ;;
+    esac
+    # loop: reopen with the fresh volume
+done

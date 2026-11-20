@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# help — searchable cheatsheet generated from the descriptions in sxhkdrc.
+#
+#   Super+F1        rofi menu (Enter copies the command)
+#   help --plain    print the same list to stdout
+#
+# The single source of truth is ~/.config/sxhkd/sxhkdrc: every hotkey is
+# documented by the comment block directly above it.
+
+set -euo pipefail
+
+self=$(readlink -f "$0")
+DOTFILES=${DOTFILES:-$(cd "$(dirname "$self")/.." && pwd)}
+SXHKD=${SXHKD_CONFIG:-$HOME/.config/sxhkd/sxhkdrc}
+THEME="$HOME/.config/rofi/help.rasi"
+
+if [ ! -r "$SXHKD" ]; then
+    echo "help: cannot read $SXHKD" >&2
+    exit 1
+fi
+
+# Emit: hotkey <TAB> description <TAB> command
+parse_sxhkd() {
+    awk '
+        function clean(s) {
+            gsub(/\t/, " ", s)
+            return s
+        }
+        {
+            line = $0
+
+            if (line ~ /^[[:space:]]*$/) {
+                desc = ""
+                want = 0
+                next
+            }
+
+            if (line ~ /^[[:space:]]*#/) {
+                if (want) next
+                text = line
+                sub(/^[[:space:]]*#[[:space:]]?/, "", text)
+
+                if (text ~ /^-+/) {
+                    sub(/^-+[[:space:]]*/, "", text)
+                    sub(/[[:space:]]*-+$/, "", text)
+                    section = text
+                    desc = ""
+                    next
+                }
+                if (text ~ /^=+/ || text == "")
+                    next
+                if (desc == "")
+                    desc = text
+                else
+                    desc = desc "  ·  " text
+                next
+            }
+
+            if (line ~ /^[^[:space:]]/) {
+                key = line
+                want = 1
+                next
+            }
+
+            if (want) {
+                cmd = line
+                sub(/^[[:space:]]+/, "", cmd)
+                if (desc == "")
+                    desc = cmd
+                printf "%s\t%s\t%s\t%s\n", clean(section), clean(key), clean(desc), clean(cmd)
+                want = 0
+                desc = ""
+            }
+        }
+    ' "$SXHKD"
+}
+
+icon_for() {
+    case $1 in
+        *Launch*)      printf '\U000F135' ;;
+        *session*)     printf '󰐥' ;;
+        *focus*)       printf '󰋈' ;;
+        *desktops*)    printf '󰍹' ;;
+        *preselect*)   printf '󰆐' ;;
+        *move*)        printf '󰁔' ;;
+        *Media*)       printf '󰝚' ;;
+        *Screenshots*) printf '󰄀' ;;
+        *sxhkd*)       printf '󰌌' ;;
+        *)             printf '•' ;;
+    esac
+}
+
+sections=()
+keys=()
+descs=()
+cmds=()
+while IFS=$'\t' read -r s k d c; do
+    sections+=("$s")
+    keys+=("$k")
+    descs+=("$d")
+    cmds+=("$c")
+done < <(parse_sxhkd)
+
+icons=()
+for s in "${sections[@]}"; do
+    icons+=("$(icon_for "$s")")
+done
+
+if [ ${#keys[@]} -eq 0 ]; then
+    echo "help: no hotkeys found in $SXHKD" >&2
+    exit 1
+fi
+
+if [ "${1:-}" = "--plain" ]; then
+    for i in "${!keys[@]}"; do
+        printf '%s  %-34s %s\n' "${icons[$i]}" "${keys[$i]}" "${descs[$i]}"
+    done
+    exit 0
+fi
+
+if ! command -v rofi >/dev/null 2>&1; then
+    for i in "${!keys[@]}"; do
+        printf '%s  %-34s %s\n' "${icons[$i]}" "${keys[$i]}" "${descs[$i]}"
+    done
+    exit 0
+fi
+
+sel=$(for i in "${!keys[@]}"; do
+    printf '%s  %-34s %s\n' "${icons[$i]}" "${keys[$i]}" "${descs[$i]}"
+done | rofi -dmenu -i -no-custom -format i -theme "$THEME" -p "" 2>/dev/null) || exit 0
+[ -n "$sel" ] || exit 0
+
+idx=$sel
+if ! [[ $idx =~ ^[0-9]+$ ]] || [ -z "${cmds[$idx]:-}" ]; then
+    exit 0
+fi
+
+cmd=${cmds[$idx]}
+if command -v xclip >/dev/null 2>&1; then
+    printf '%s' "$cmd" | xclip -selection clipboard >/dev/null 2>&1 || true
+    "$DOTFILES/bin/notify" help "Хоткей" "Команда скопирована: $cmd"
+fi

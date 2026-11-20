@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# bar — start/stop/restart the top Polybar and keep bspwm's top padding in sync.
+
+set -euo pipefail
+
+CONFIG="$HOME/.config/polybar/config.ini"
+LOG="${XDG_CACHE_HOME:-$HOME/.cache}/polybar.log"
+HEIGHT=26
+OFFSET_Y=4
+BORDER=4
+PAD=$((HEIGHT + OFFSET_Y + BORDER))
+
+pad() {
+    command -v bspc >/dev/null 2>&1 || return 0
+    bspc config top_padding "$1" 2>/dev/null || true
+}
+
+running() {
+    pgrep -x polybar >/dev/null 2>&1
+}
+
+start() {
+    if ! command -v polybar >/dev/null 2>&1; then
+        printf 'bar: polybar is not installed\n' >&2
+        return 1
+    fi
+    if [ ! -f "$CONFIG" ]; then
+        printf 'bar: config not found: %s\n' "$CONFIG" >&2
+        return 1
+    fi
+    if ! running; then
+        setsid polybar -c "$CONFIG" top >"$LOG" 2>&1 &
+        sleep 0.3
+    fi
+    if running; then
+        pad "$PAD"
+    else
+        printf 'bar: polybar failed to start (see %s)\n' "$LOG" >&2
+        return 1
+    fi
+}
+
+stop() {
+    if running; then
+        pkill -x polybar 2>/dev/null || true
+    fi
+    pad 0
+}
+
+case "${1:-toggle}" in
+    start) start ;;
+    stop) stop ;;
+    restart) stop; sleep 0.2; start ;;
+    toggle)
+        if running; then stop; else start; fi
+        ;;
+    status)
+        if running; then
+            printf 'bar: running\n'
+        else
+            printf 'bar: stopped\n'
+        fi
+        ;;
+    *)
+        printf 'usage: bar [start|stop|restart|toggle|status]\n' >&2
+        exit 2
+        ;;
+esac

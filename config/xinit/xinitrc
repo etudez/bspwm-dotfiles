@@ -1,0 +1,23 @@
+#!/bin/sh
+# ~/.xinitrc — start bspwm; everything else is launched from bspwmrc.
+
+# Cursor theme for every X11 client in the session.
+export XCURSOR_THEME="${XCURSOR_THEME:-Bibata-Modern-Classic}"
+export XCURSOR_SIZE="${XCURSOR_SIZE:-24}"
+
+# Runtime directory, session bus and PipeWire environment.
+[ -f "$HOME/.config/session/env.sh" ] && . "$HOME/.config/session/env.sh"
+
+# Keep the monitor on during idle.
+if [ -x "$HOME/.local/bin/no-blank" ]; then
+    "$HOME/.local/bin/no-blank" || true
+fi
+
+# Apps inherit this working directory; keep it sane.
+cd "$HOME" 2>/dev/null || true
+
+if [ -f "$HOME/.config/X11/xresources" ] && command -v xrdb >/dev/null 2>&1; then
+    xrdb -merge "$HOME/.config/X11/xresources"
+fi
+
+bspwm

@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Start/stop the compositor (useful for games and screen recording).
+
+if pgrep -x picom >/dev/null 2>&1; then
+    pkill -x picom
+else
+    command -v picom >/dev/null 2>&1 &&
+        picom --config "$HOME/.config/picom/picom.conf" --daemon
+fi

@@ -1,0 +1,56 @@
+#!/bin/sh
+# Pretty lock screen: blurred desktop, clock, date, keyboard layout and a
+# Material ring indicator (i3lock-color). Falls back to plain i3lock.
+
+[ -f "$HOME/.config/bspwm/colors.sh" ] && . "$HOME/.config/bspwm/colors.sh"
+
+SURFACE=${COLOR_SURFACE:-#0f1417}
+ON_SURFACE=${COLOR_ON_SURFACE:-#dee3e6}
+ON_SURFACE_VARIANT=${COLOR_ON_SURFACE_VARIANT:-#c0c8cc}
+PRIMARY=${COLOR_PRIMARY:-#89d0ee}
+ERROR=${COLOR_ERROR:-#ffb4ab}
+OUTLINE_VARIANT=${COLOR_OUTLINE_VARIANT:-#40484c}
+
+SURFACE=${SURFACE#\#}
+ON_SURFACE=${ON_SURFACE#\#}
+ON_SURFACE_VARIANT=${ON_SURFACE_VARIANT#\#}
+PRIMARY=${PRIMARY#\#}
+ERROR=${ERROR#\#}
+OUTLINE_VARIANT=${OUTLINE_VARIANT#\#}
+
+if ! command -v i3lock >/dev/null 2>&1; then
+    command -v loginctl >/dev/null 2>&1 && exec loginctl lock-session
+    exit 0
+fi
+
+# i3lock-color reports a version like "2.13.c.5".
+if i3lock --version 2>&1 | grep -q 'c\.'; then
+    exec i3lock -n \
+        --blur=8 \
+        --clock --indicator \
+        --radius=115 --ring-width=5 \
+        --time-str='%H:%M' --date-str='%a, %d %b' \
+        --time-font='JetBrains Mono' --time-size=46 \
+        --date-font='Roboto' --date-size=14 \
+        --keylayout=2 --layout-font='Roboto' --layout-size=12 \
+        --verif-text='Проверка…' --wrong-text='Неверно' \
+        --noinput-text='Нет ввода' --show-failed-attempts \
+        --time-color="${ON_SURFACE}ff" \
+        --date-color="${ON_SURFACE_VARIANT}ff" \
+        --layout-color="${PRIMARY}ff" \
+        --inside-color="${SURFACE}cc" \
+        --ring-color="${OUTLINE_VARIANT}aa" \
+        --line-color="${SURFACE}00" \
+        --separator-color="${OUTLINE_VARIANT}ff" \
+        --insidever-color="${PRIMARY}44" \
+        --ringver-color="${PRIMARY}ff" \
+        --insidewrong-color="${ERROR}44" \
+        --ringwrong-color="${ERROR}ff" \
+        --keyhl-color="${PRIMARY}ff" \
+        --bshl-color="${ERROR}ff" \
+        --verif-color="${ON_SURFACE}ff" \
+        --wrong-color="${ERROR}ff"
+fi
+
+# Plain i3lock: at least keep the Material surface colour.
+exec i3lock -n -c "$SURFACE"

@@ -1,0 +1,19 @@
+#!/bin/sh
+# bar-net — network name (SSID) for the top bar.
+
+iface=$(ip route show default 2>/dev/null | awk '/^default/ { print $5; exit }')
+if [ -z "$iface" ]; then
+    printf 'offline'
+    exit 0
+fi
+
+if [ -d "/sys/class/net/$iface/wireless" ] && command -v iw >/dev/null 2>&1; then
+    ssid=$(iw dev "$iface" link 2>/dev/null |
+        sed -n 's/^[[:space:]]*SSID: //p' | head -n1)
+    if [ -n "$ssid" ]; then
+        printf '%s' "$ssid"
+        exit 0
+    fi
+fi
+
+printf '%s' "$iface"

@@ -1,0 +1,27 @@
+#!/bin/sh
+# display — set the highest refresh rate available at the current resolution.
+#
+# X starts the monitor at its preferred (usually 60 Hz) mode. This picks the
+# current resolution and the fastest refresh rate offered for it, e.g. 1080p144.
+
+XR=$(command -v xrandr 2>/dev/null || true)
+if [ -z "$XR" ] && [ -x "$HOME/.local/bin/xrandr" ]; then
+    XR="$HOME/.local/bin/xrandr"
+fi
+[ -n "$XR" ] || exit 0
+
+out=$("$XR" --query 2>/dev/null | awk '/ connected/ { print $1; exit }')
+[ -n "$out" ] || exit 0
+
+mode=$("$XR" --query 2>/dev/null | awk '/\*/ { print $1; exit }')
+[ -n "$mode" ] || exit 0
+
+rate=$("$XR" --query 2>/dev/null |
+    awk -v m="$mode" '$1 == m {
+        for (i = 2; i <= NF; i++) {
+            r = $i; gsub(/[^0-9.]/, "", r); if (r != "") print r
+        }
+    }' | sort -gr | head -n1)
+[ -n "$rate" ] || exit 0
+
+"$XR" --output "$out" --mode "$mode" --rate "$rate" 2>/dev/null || true

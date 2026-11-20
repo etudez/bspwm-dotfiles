@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# theme [image] [--no-reload]
+#
+# Regenerate the whole Material You palette from a wallpaper and hot-reload
+# every running component. With no argument, re-applies the current wallpaper.
+
+set -euo pipefail
+
+self=$(readlink -f "$0")
+DOTFILES=${DOTFILES:-$(cd "$(dirname "$self")/.." && pwd)}
+STATE_DIR=${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles
+IMAGE=""
+RELOAD=1
+
+for arg in "$@"; do
+    case $arg in
+        --no-reload) RELOAD=0 ;;
+        -h|--help)
+            printf 'usage: theme [image] [--no-reload]\n'
+            exit 0
+            ;;
+        *) IMAGE=$arg ;;
+    esac
+done
+
+MATUGEN=$(command -v matugen 2>/dev/null || true)
+if [ -z "$MATUGEN" ] && [ -x "$HOME/.local/bin/matugen" ]; then
+    MATUGEN="$HOME/.local/bin/matugen"
+fi
+if [ -z "$MATUGEN" ]; then
+    echo "theme: matugen not found. Run ./install.sh or install matugen." >&2
+    exit 1
+fi
+
+if [ -z "$IMAGE" ]; then
+    IMAGE=$(cat "$STATE_DIR/wallpaper" 2>/dev/null || true)
+fi
+if [ -z "$IMAGE" ] || [ ! -f "$IMAGE" ]; then
+    IMAGE="$DOTFILES/wallpapers/default.png"
+fi
+case $IMAGE in
+    /*) ;;
+    *) IMAGE="$PWD/$IMAGE" ;;
+esac
+if [ ! -r "$IMAGE" ]; then
+    echo "theme: cannot read $IMAGE" >&2
+    exit 1
+fi
+
+mkdir -p "$STATE_DIR"
+mkdir -p "$HOME/.config/fish/conf.d"
+printf '%s' "$IMAGE" > "$STATE_DIR/wallpaper"
+
+# Grayscale wallpapers have no hue: tonal-spot would invent a blue/cyan tint.
+# Detect them with ffmpeg (SATAVG=0 for pure B&W) and use a neutral scheme.
+scheme=scheme-tonal-spot
+if command -v ffmpeg >/dev/null 2>&1; then
+    sat=$(ffmpeg -v error -i "$IMAGE" \
+        -vf "signalstats,metadata=print:file=-" -frames:v 1 -f null - 2>/dev/null |
+        sed -n 's/^lavfi\.signalstats\.SATAVG=//p' | head -n1)
+    case "$sat" in
+        '' | *[!0-9.]*) ;;
+        *)
+            if awk -v s="$sat" 'BEGIN { exit !(s < 5) }'; then
+                scheme=scheme-content
+                printf 'theme: grayscale wallpaper → neutral palette\n'
+            fi
+            ;;
+    esac
+fi
+
+"$MATUGEN" -c "$DOTFILES/theme/matugen.toml" image "$IMAGE" \
+    -m dark --type "$scheme" --prefer saturation
+
+if [ "$RELOAD" = 1 ] && [ -n "${DISPLAY:-}" ]; then
+    command -v feh >/dev/null 2>&1 && feh --no-fehbg --bg-fill "$IMAGE" || true
+    command -v xrdb >/dev/null 2>&1 &&
+        xrdb -merge "$HOME/.config/X11/xresources" 2>/dev/null || true
+
+    if command -v bspc >/dev/null 2>&1 && [ -f "$HOME/.config/bspwm/colors.sh" ]; then
+        # shellcheck disable=SC1091
+        . "$HOME/.config/bspwm/colors.sh"
+        bspc config normal_border_color   "$COLOR_PRIMARY_CONTAINER" 2>/dev/null || true
+        bspc config focused_border_color  "$COLOR_PRIMARY"         2>/dev/null || true
+        bspc config active_border_color   "$COLOR_PRIMARY"         2>/dev/null || true
+        bspc config presel_feedback_color "$COLOR_PRIMARY_CONTAINER" 2>/dev/null || true
+        bspc config urgent_border_color   "$COLOR_ERROR"           2>/dev/null || true
+    fi
+
+    pkill -USR1 -x picom 2>/dev/null || true
+    command -v dunstctl >/dev/null 2>&1 && dunstctl reload >/dev/null 2>&1 || true
+    if command -v kitty >/dev/null 2>&1; then
+        kitty @ set-colors --all "$HOME/.config/kitty/colors.conf" >/dev/null 2>&1 || true
+    fi
+    if command -v polybar-msg >/dev/null 2>&1; then
+        polybar-msg cmd restart >/dev/null 2>&1 || true
+    fi
+fi
+
+if [ -f "$HOME/.config/bspwm/colors.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$HOME/.config/bspwm/colors.sh"
+    printf 'theme: %s\n  primary %s   surface %s\n' \
+        "$(basename "$IMAGE")" "$COLOR_PRIMARY" "$COLOR_SURFACE"
+else
+    printf 'theme: %s\n' "$(basename "$IMAGE")"
+fi

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+<action>
+	<icon>utilities-terminal</icon>
+	<name>Open Terminal Here</name>
+	<submenu></submenu>
+	<unique-id>1795079316173653-1</unique-id>
+	<command>sh -c 'exec "$HOME/.local/bin/open-terminal" "$1"' _ "%f"</command>
+	<description>Open kitty in the selected folder</description>
+	<range></range>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<directories/>
+</action>
+</actions>

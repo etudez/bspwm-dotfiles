@@ -1,0 +1,8 @@
+# ~/.bash_profile
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
+
+# Start X automatically on tty1 when bash is used as the login shell.
+if [ -z "${DISPLAY:-}" ] && [ -z "${SSH_CONNECTION:-}" ] &&
+   [ "$(tty)" = "/dev/tty1" ] && [ ! -e /tmp/.X0-lock ]; then
+    exec startx
+fi

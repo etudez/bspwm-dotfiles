@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# volume up|down|mute|get — works with PipeWire, PulseAudio or plain ALSA.
+
+set -u
+
+self=$(readlink -f "$0")
+NOTIFY="$(cd "$(dirname "$self")" && pwd)/notify"
+action=${1:-get}
+
+has() { command -v "$1" >/dev/null 2>&1; }
+wpctl_ok() { has wpctl && wpctl status >/dev/null 2>&1; }
+
+get_vol() {
+    if wpctl_ok; then
+        wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null |
+            awk '{printf "%d", $2 * 100}'
+    elif has pactl; then
+        pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null |
+            grep -o '[0-9]\+%' | head -n1 | tr -d '%'
+    elif has amixer; then
+        amixer get Master 2>/dev/null |
+            grep -o '[0-9]\+%' | head -n1 | tr -d '%'
+    fi
+}
+
+is_muted() {
+    if wpctl_ok; then
+        wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | grep -q MUTED
+    elif has pactl; then
+        pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null | grep -q yes
+    elif has amixer; then
+        amixer get Master 2>/dev/null | grep -q '\[off\]'
+    else
+        return 1
+    fi
+}
+
+case $action in
+    up)
+        if wpctl_ok; then
+            wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+ >/dev/null
+        elif has pactl; then
+            pactl set-sink-volume @DEFAULT_SINK@ +5% >/dev/null
+        elif has amixer; then
+            amixer -q sset Master 5%+ >/dev/null
+        fi
+        ;;
+    down)
+        if wpctl_ok; then
+            wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- >/dev/null
+        elif has pactl; then
+            pactl set-sink-volume @DEFAULT_SINK@ -5% >/dev/null
+        elif has amixer; then
+            amixer -q sset Master 5%- >/dev/null
+        fi
+        ;;
+    mute)
+        if wpctl_ok; then
+            wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle >/dev/null
+        elif has pactl; then
+            pactl set-sink-mute @DEFAULT_SINK@ toggle >/dev/null
+        elif has amixer; then
+            amixer -q sset Master toggle >/dev/null
+        fi
+        ;;
+    set)
+        val=${2:-}
+        case $val in
+            ''|*[!0-9]*) echo "usage: volume set 0..100" >&2; exit 2 ;;
+        esac
+        [ "$val" -gt 100 ] && val=100
+        if wpctl_ok; then
+            wpctl set-volume @DEFAULT_AUDIO_SINK@ "${val}%" >/dev/null
+            wpctl set-mute @DEFAULT_AUDIO_SINK@ 0 >/dev/null
+        elif has pactl; then
+            pactl set-sink-volume @DEFAULT_SINK@ "${val}%" >/dev/null
+            pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null
+        elif has amixer; then
+            amixer -q sset Master "${val}%" unmute >/dev/null
+        fi
+        ;;
+    muted)
+        if is_muted; then echo yes; else echo no; fi
+        exit 0
+        ;;
+    get)
+        get_vol
+        exit 0
+        ;;
+    *)
+        echo "usage: volume up|down|mute|set N|muted|get" >&2
+        exit 2
+        ;;
+esac
+
+vol=$(get_vol)
+if is_muted; then
+    NOTIFY_VALUE=0 "$NOTIFY" volume "Muted" ""
+elif [ -n "$vol" ]; then
+    NOTIFY_VALUE=$vol "$NOTIFY" volume "Volume" "${vol}%"
+fi

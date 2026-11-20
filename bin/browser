@@ -1,0 +1,15 @@
+#!/bin/sh
+# Open the default browser. Firefox is preferred; any common browser works as
+# a fallback. An optional URL argument is passed through.
+
+for browser in firefox firefox-esr chromium chromium-browser \
+               google-chrome-stable brave-browser; do
+    if command -v "$browser" >/dev/null 2>&1; then
+        exec "$browser" "$@"
+    fi
+done
+
+if [ -n "${1:-}" ]; then
+    exec xdg-open "$1"
+fi
+exec xdg-open https://

@@ -1,0 +1,6 @@
+#!/bin/sh
+# dhcpcd hook: keep Wi-Fi power save off after every lease/reconnect.
+[ -n "${interface:-}" ] || exit 0
+[ -d "/sys/class/net/$interface/wireless" ] || exit 0
+[ -x /usr/local/bin/performance ] && /usr/local/bin/performance wifi "$interface"
+exit 0

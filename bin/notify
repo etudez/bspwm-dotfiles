@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# notify APP SUMMARY [BODY]
+# Sets NOTIFY_VALUE to show a progress bar in dunst.
+
+app=${1:-dotfiles}
+summary=${2:-}
+body=${3:-}
+
+if command -v dunstify >/dev/null 2>&1; then
+    args=(-a "$app" -h "string:x-dunst-stack-tag:$app")
+    [ -n "${NOTIFY_VALUE:-}" ] && args+=(-h "int:value:$NOTIFY_VALUE")
+    dunstify "${args[@]}" "$summary" "$body" >/dev/null 2>&1 && exit 0
+fi
+if command -v notify-send >/dev/null 2>&1; then
+    notify-send -a "$app" "$summary" "$body"
+fi
+exit 0

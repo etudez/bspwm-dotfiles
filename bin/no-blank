@@ -1,0 +1,8 @@
+#!/bin/sh
+# Keep the X screen on: no screen saver blanking, no DPMS standby/suspend/off.
+
+command -v xset >/dev/null 2>&1 || exit 0
+
+xset s off           # disable the X screen saver timeout
+xset s noblank       # do not blank even if the saver is activated
+xset -dpms           # disable monitor power management

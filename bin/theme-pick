@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Pick a wallpaper with rofi and rebuild the palette from it.
+
+set -euo pipefail
+
+self=$(readlink -f "$0")
+DOTFILES=${DOTFILES:-$(cd "$(dirname "$self")/.." && pwd)}
+THEME="$HOME/.config/rofi/dialog.rasi"
+
+dirs=("$HOME/Pictures" "$HOME/Wallpapers" "$HOME/Downloads" "$DOTFILES/wallpapers")
+files=()
+while IFS= read -r f; do
+    if [ -n "$f" ]; then files+=("$f"); fi
+done < <(
+    for d in "${dirs[@]}"; do
+        [ -d "$d" ] || continue
+        find "$d" -maxdepth 3 -type f \
+            \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \
+               -o -iname '*.webp' \) 2>/dev/null
+    done | sort -u
+)
+
+if [ ${#files[@]} -eq 0 ]; then
+    "$DOTFILES/bin/notify" theme "Wallpaper" "No images in ~/Pictures"
+    exit 1
+fi
+
+current=$(cat "$HOME/.cache/dotfiles/wallpaper" 2>/dev/null || true)
+
+if ! command -v rofi >/dev/null 2>&1; then
+    for i in "${!files[@]}"; do
+        if [ "${files[$i]}" = "$current" ]; then mark="●"; else mark=" "; fi
+        printf '%s  %s\n' "$mark" "$(basename "${files[$i]}")"
+    done
+    exit 1
+fi
+
+sel=$(for i in "${!files[@]}"; do
+    if [ "${files[$i]}" = "$current" ]; then mark="●"; else mark=" "; fi
+    printf '%s  %s\n' "$mark" "$(basename "${files[$i]}")"
+done | rofi -dmenu -i -no-custom -format i -theme "$THEME" \
+    -p "" -mesg "  󰸉  Обои") || exit 0
+[ -n "$sel" ] || exit 0
+[[ $sel =~ ^[0-9]+$ ]] || exit 0
+idx=$sel
+[ -n "${files[$idx]:-}" ] || exit 0
+exec "$DOTFILES/bin/theme" "${files[$idx]}"

@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Set the X root cursor from the Xcursor theme.
+
+Window managers like bspwm do not touch the root cursor, so X keeps its
+fallback "X" cursor and every window without an explicit cursor shows it.
+Setting the root cursor once at session start fixes the desktop, gaps and all
+default cursors in one shot.
+"""
+
+import ctypes
+import os
+import sys
+from ctypes import c_char_p, c_int, c_ulong, c_void_p
+
+theme = os.environ.get("XCURSOR_THEME", "Bibata-Modern-Classic")
+size = int(os.environ.get("XCURSOR_SIZE", "24"))
+name = os.environ.get("XCURSOR_NAME", "left_ptr")
+
+try:
+    x11 = ctypes.CDLL("libX11.so.6")
+    xcursor = ctypes.CDLL("libXcursor.so.1")
+except OSError as exc:
+    print(f"cursor: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+x11.XOpenDisplay.argtypes = [c_char_p]
+x11.XOpenDisplay.restype = c_void_p
+x11.XDefaultRootWindow.argtypes = [c_void_p]
+x11.XDefaultRootWindow.restype = c_ulong
+x11.XDefineCursor.argtypes = [c_void_p, c_ulong, c_ulong]
+x11.XDefineCursor.restype = c_int
+x11.XFlush.argtypes = [c_void_p]
+
+xcursor.XcursorSetTheme.argtypes = [c_void_p, c_char_p]
+xcursor.XcursorSetTheme.restype = c_int
+xcursor.XcursorSetDefaultSize.argtypes = [c_void_p, c_int]
+xcursor.XcursorSetDefaultSize.restype = c_int
+xcursor.XcursorLibraryLoadCursor.argtypes = [c_void_p, c_char_p]
+xcursor.XcursorLibraryLoadCursor.restype = c_ulong
+
+display = x11.XOpenDisplay(None)
+if not display:
+    print("cursor: cannot open display", file=sys.stderr)
+    sys.exit(1)
+
+xcursor.XcursorSetTheme(display, theme.encode())
+xcursor.XcursorSetDefaultSize(display, size)
+cursor = xcursor.XcursorLibraryLoadCursor(display, name.encode())
+if not cursor:
+    print(f"cursor: cannot load {name} from {theme}", file=sys.stderr)
+    sys.exit(1)
+
+root = x11.XDefaultRootWindow(display)
+x11.XDefineCursor(display, root, cursor)
+x11.XFlush(display)
