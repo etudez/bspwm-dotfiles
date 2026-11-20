@@ -23,8 +23,10 @@ dim()  { printf '%s     %s%s\n' "$DIM" "$*" "$OFF"; }
 section() { printf '\n%s%s%s\n' "$BOLD" "$*" "$OFF"; }
 
 section "Session"
-if [ -f /etc/polkit-1/rules.d/49-desktop-power.rules ]; then
-    ok "polkit power rule installed"
+if command -v pkcheck >/dev/null 2>&1 &&
+    pkcheck --action-id org.freedesktop.login1.power-off --process $$ 2>/dev/null |
+    grep -qE 'result=yes|authorized'; then
+    ok "polkit power actions authorized"
 else
     note "polkit power rule is missing (power menu may fail)"
     dim "install: sudo ./system/polkit/install.sh"
