@@ -8,6 +8,11 @@ export XCURSOR_SIZE="${XCURSOR_SIZE:-24}"
 # Runtime directory, session bus and PipeWire environment.
 [ -f "$HOME/.config/session/env.sh" ] && . "$HOME/.config/session/env.sh"
 
+# Keyboard layout: US/RU, Alt+Shift toggles.
+if command -v setxkbmap >/dev/null 2>&1; then
+    setxkbmap -layout us,ru -option grp:alt_shift_toggle,grp_led:scroll || true
+fi
+
 # Keep the monitor on during idle.
 if [ -x "$HOME/.local/bin/no-blank" ]; then
     "$HOME/.local/bin/no-blank" || true
