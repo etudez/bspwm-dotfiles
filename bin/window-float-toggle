@@ -1,0 +1,10 @@
+#!/bin/sh
+# Toggle the focused window between tiled and floating.
+
+state=$(bspc query -T -n 2>/dev/null |
+    sed -n 's/.*"state":"\([^"]*\)".*/\1/p' | head -n1)
+
+case "$state" in
+    floating) bspc node -t tiled ;;
+    *)        bspc node -t floating ;;
+esac

@@ -91,9 +91,9 @@ super + m
 super + t
     bspc node -t pseudo_tiled
 
-# Плавающее окно
+# Плавающее окно / обратно в тайлинг
 super + s
-    bspc node -t floating
+    ~/.local/bin/window-float-toggle
 
 # Убрать / вернуть отступы между окнами
 super + g
@@ -154,14 +154,6 @@ super + ctrl + shift + space
     bspc query -N -d | xargs -I id -n 1 bspc node id -p cancel
 
 # --- bspwm: move & resize ---------------------------------------------------
-
-# Расширить окно в сторону
-super + alt + {h,j,k,l}
-    bspc node -z {left -20 0,bottom 0 20,top 0 -20,right 20 0}
-
-# Сузить окно со стороны
-super + alt + shift + {h,j,k,l}
-    bspc node -z {right -20 0,top 0 20,bottom 0 -20,left 20 0}
 
 # Двигать плавающее окно
 super + {Left,Down,Up,Right}

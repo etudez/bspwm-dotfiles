@@ -114,7 +114,10 @@ dhcpcd-хук. Не запускай `system/install.sh` на другой си�
 | `Super+bracketleft/right` | предыдущий/следующий стол |
 | `Super+f` | fullscreen (туда/обратно) |
 | `Super+Shift+f` | аварийно вернуть окно в тайлинг |
-| `Super+t` / `Super+s` | pseudo-tile / floating |
+| `Super+t` / `Super+s` | pseudo-tile / floating (туда-обратно) |
+| `Super+ЛКМ` | переместить окно мышью |
+| `Super+ПКМ` | размер за угол |
+| `Super+СКМ` | размер за сторону |
 | `Super+Shift+t` | выбрать обои и палитру |
 | `Super+g` | анимированно убрать/вернуть отступы |
 | `Super+m` | monocle |
